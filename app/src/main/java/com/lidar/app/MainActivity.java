@@ -21,6 +21,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TableLayout;
 
+import org.jetbrains.annotations.TestOnly;
+
 import java.io.Console;
 import java.lang.Math;
 public class MainActivity extends AppCompatActivity {
@@ -53,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
         {
             return m_table[x][y];
         }
+        @TestOnly
         public void Test()
         {
             angleRad = 0;
