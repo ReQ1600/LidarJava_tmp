@@ -10,20 +10,20 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Point;
-import android.icu.number.Precision;
-import android.icu.text.AlphabeticIndex;
 import android.os.Bundle;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TableLayout;
+import android.widget.TableRow;
+import android.widget.TextView;
 
 import org.jetbrains.annotations.TestOnly;
 
-import java.io.Console;
 import java.lang.Math;
 public class MainActivity extends AppCompatActivity {
 
@@ -121,9 +121,44 @@ public class MainActivity extends AppCompatActivity {
         isTableShowed = false;
     }
 
-    //TO DO: this V
     private void addTableElement(LidarPoint point)
     {
+        final float density = getResources().getDisplayMetrics().density;
+        final int paddingInDP = (int)(10 * density);
+
+        TableRow newRow = new TableRow(this);
+        TextView txt_id = new TextView(this);
+        TextView txt_distance = new TextView(this);
+        View newSpacer = new View(this);
+
+        newRow.setGravity(Gravity.CENTER_HORIZONTAL);
+        newRow.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.WRAP_CONTENT));
+
+        txt_id.setText(Integer.toString(point.id));
+        txt_id.setTextColor(Color.WHITE);
+        txt_id.setTextSize(TypedValue.COMPLEX_UNIT_DIP,20);
+        txt_id.setTextAlignment(TextView.TEXT_ALIGNMENT_CENTER);
+        txt_id.setPadding(paddingInDP, paddingInDP, paddingInDP, paddingInDP);
+        newRow.addView(txt_id);
+
+        txt_distance.setText(Integer.toString(point.id)+"mm");
+        txt_distance.setTextColor(Color.WHITE);
+        txt_distance.setTextSize(TypedValue.COMPLEX_UNIT_DIP,20);
+        txt_distance.setTextAlignment(TextView.TEXT_ALIGNMENT_CENTER);
+        txt_distance.setPadding(paddingInDP, paddingInDP, paddingInDP, paddingInDP);
+        newRow.addView(txt_distance);
+
+
+        tblPoints.addView(newRow);
+        tblPoints.addView(newSpacer);
+        newSpacer.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (int) (2*density)));
+        ViewGroup.MarginLayoutParams marginParams = (ViewGroup.MarginLayoutParams) newSpacer.getLayoutParams();
+        marginParams.setMargins((int)(12*density),0,(int)(12*density),0);
+        newSpacer.setLayoutParams(marginParams);
+
+
+        newSpacer.setBackgroundColor(Color.parseColor("#232323"));
+
 
     }
 
@@ -138,7 +173,6 @@ public class MainActivity extends AppCompatActivity {
         ivDisplay = findViewById(R.id.ivDisplay);
         tblPoints = findViewById(R.id.tblPoints);
         tblBtn = findViewById(R.id.tblBtn);
-
         tblPoints.post(() -> {
             tblPoints.animate().translationY(tblPoints.getHeight());
             tblPoints.setVisibility(LinearLayout.GONE);
@@ -161,6 +195,8 @@ public class MainActivity extends AppCompatActivity {
 
         btnStart.setOnClickListener((view) -> {
                 //checking if scanning has began
+
+                addTableElement(CreateLidarPoint(0,20));
                 ScanningState scanningState = BeginScanning();
                 if (scanningState != ScanningState.STARTED)
                 {
