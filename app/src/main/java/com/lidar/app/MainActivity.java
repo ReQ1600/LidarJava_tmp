@@ -151,8 +151,6 @@ public class MainActivity extends AppCompatActivity {
         newRow.setOnClickListener((view)->{});
         tblPoints.addView(newRow);
 
-
-
         tblPoints.addView(newSpacer);
         newSpacer.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (int) (2*density)));
         ViewGroup.MarginLayoutParams marginParams = (ViewGroup.MarginLayoutParams) newSpacer.getLayoutParams();
