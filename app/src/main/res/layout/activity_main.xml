@@ -56,31 +56,36 @@
         android:layout_weight="55"
         android:layout_marginHorizontal="10dp"
         android:background="#323232"
-        android:visibility="visible">
-<ScrollView
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-
-</ScrollView>
+        android:visibility="visible"
+        android:stretchColumns="0,1">
         <View
             android:layout_width="match_parent"
             android:layout_height="3dip"
             android:background="#232323" />
 
         <TableRow
+            android:id="@+id/tblRowTemplate"
             android:layout_width="match_parent"
             android:gravity="center">
 
             <TextView
                 android:padding="10dip"
-                android:text="dsadasdasdas"
+                android:text="ID"
                 android:textAlignment="center"
                 android:textColor="@color/white"
                 android:textSize="20sp" />
+
+            <TextView
+                android:padding="10dip"
+                android:text="Distance"
+                android:textAlignment="center"
+                android:textColor="@color/white"
+                android:textSize="20sp" />
+
         </TableRow>
 
         <View
+            android:id="@+id/tblSpacer"
             android:layout_width="match_parent"
             android:layout_height="2dip"
             android:layout_marginHorizontal="12dip"
