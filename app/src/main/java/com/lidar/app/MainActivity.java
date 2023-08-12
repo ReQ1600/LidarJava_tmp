@@ -1,5 +1,6 @@
 package com.lidar.app;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -15,6 +16,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AlphaAnimation;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -37,9 +39,14 @@ public class MainActivity extends AppCompatActivity {
     private ImageView ivDisplay = null;
     private TableLayout tblPoints = null;
     private TableLayout tblBtn = null;
+    private Canvas DisplayCanvas = null;
+    private Paint DisplayPaint = null;
+    private Bitmap DisplayBitmap = null;
     private boolean isTableShowed = true;
     private boolean didTheLidarRunAtLeastOnce = false;//long
-
+    private float ButtonMaxAlpha = 1f;
+    private double PointsCords[][] = null;
+    private boolean canDisplayBeTouched = true;
     private static final class CosSin
     {
         public CosSin()
@@ -51,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
                 angleRad += ANGLE_INCREASE_RAD;
             }
         }
-        public double Get(int x,int y)
+        public double Get(@NonNull int x, @NonNull int y)
         {
             return m_table[x][y];
         }
@@ -75,11 +82,24 @@ public class MainActivity extends AppCompatActivity {
 
     private record LidarPoint(int id, double x, double y, double distance) { }
 
-    private LidarPoint CreateLidarPoint(int id, double distance)
+    //Creates lidar point, sets proper cords and adds them to the table and display
+    private LidarPoint CreateLidarPoint(@NonNull int id, @NonNull double distance)
     {
+        //rotating point around the center
         double x = ivDisplay.getWidth() / 2f + COS_SIN_TABLE.Get(id,1) * distance;
         double y = ivDisplay.getHeight() / 2f + COS_SIN_TABLE.Get(id,0) * distance;
-        return new LidarPoint(id,x,y,distance);
+
+        //addding cords to the their table and display
+        PointsCords[id][0] = x;
+        PointsCords[id][1] = y;
+        DisplayCanvas.drawCircle((float)x,(float)y,4*getResources().getDisplayMetrics().density,DisplayPaint);
+        ivDisplay.setImageBitmap(DisplayBitmap);
+
+        //adding points to gui table
+        LidarPoint point = new LidarPoint(id,x,y,distance);
+        addTableElement(point);
+
+        return point;
     }
     private enum ScanningState
     {
@@ -88,7 +108,8 @@ public class MainActivity extends AppCompatActivity {
         ERROR
     }
 
-    //if no connected device or some shit happens return false;
+    ////TODO: bluettoth connencting
+    //if no connected device or some shit happens returns false;
     private ScanningState BeginScanning()
     {
         //everything working
@@ -101,8 +122,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void ShowTable()
     {
+        AlphaAnimation animation = new AlphaAnimation(ButtonMaxAlpha,0f);
+        animation.setDuration(300);
+        animation.setFillAfter(true);
+        tblBtn.startAnimation(animation);
         tblPoints.setVisibility(TableLayout.VISIBLE);
-        tblPoints.animate().translationY(0).setListener(null);
+        tblPoints.animate().translationY(0).setListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                super.onAnimationEnd(animation);
+                canDisplayBeTouched = true;
+            }
+        });
         tblBtn.setVisibility(TableLayout.GONE);
         isTableShowed = true;
     }
@@ -115,13 +146,18 @@ public class MainActivity extends AppCompatActivity {
                 super.onAnimationEnd(animation);
                 tblPoints.setVisibility(TableLayout.GONE);
                 tblBtn.setVisibility(TableLayout.VISIBLE);
+                canDisplayBeTouched = true;
             }
         });
+        AlphaAnimation alphaAnimation = new AlphaAnimation(0f,ButtonMaxAlpha);
+        alphaAnimation.setDuration(300);
+        alphaAnimation.setFillAfter(true);
+        tblBtn.startAnimation(alphaAnimation);
 
         isTableShowed = false;
     }
 
-    private void addTableElement(LidarPoint point)
+    private void addTableElement(@NonNull LidarPoint point)
     {
         final float density = getResources().getDisplayMetrics().density;
         final int paddingInDP = (int)(10 * density);
@@ -170,6 +206,7 @@ public class MainActivity extends AppCompatActivity {
         ivDisplay = findViewById(R.id.ivDisplay);
         tblPoints = findViewById(R.id.tblPoints);
         tblBtn = findViewById(R.id.tblBtn);
+
         tblPoints.post(() -> {
             tblPoints.animate().translationY(tblPoints.getHeight());
             tblPoints.setVisibility(LinearLayout.GONE);
@@ -177,9 +214,19 @@ public class MainActivity extends AppCompatActivity {
             isTableShowed = false;
         });//this needs to be like that bc the first time it shows up the height is measured as 0 cuz its "gone"
 
+        ivDisplay.post(() -> {
+            DisplayBitmap = Bitmap.createBitmap(ivDisplay.getWidth(), ivDisplay.getHeight(),Bitmap.Config.ARGB_8888);
+            DisplayCanvas = new Canvas(DisplayBitmap);
+            DisplayPaint = new Paint();
+            DisplayPaint.setColor(Color.BLACK);
+            DisplayPaint.setStyle(Paint.Style.FILL);
+        });//canvas and else need to be created after ImageView
+
 //        TableRow r = (TableRow) tblPoints.getChildAt(1);
 //        TextView a = (TextView) r.getChildAt(0);
 //        a.setText("aaaa");
+
+
 
         //setting up dialog box builder for errors
         AlertDialog.Builder dlgConnectionError_builder = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog);
@@ -194,8 +241,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnStart.setOnClickListener((view) -> {
                 //checking if scanning has began
-
-                addTableElement(CreateLidarPoint(0,20));
+            COS_SIN_TABLE.Test();
                 ScanningState scanningState = BeginScanning();
                 if (scanningState != ScanningState.STARTED)
                 {
@@ -209,28 +255,48 @@ public class MainActivity extends AppCompatActivity {
                 }
                 else
                 {
-                    Bitmap bitmap = Bitmap.createBitmap(ivDisplay.getWidth(), ivDisplay.getHeight(),Bitmap.Config.ARGB_8888);
-                    Canvas canvas = new Canvas(bitmap);
-
-                    Paint paint = new Paint();
-                    paint.setColor(Color.BLACK);
-                    paint.setStyle(Paint.Style.FILL);
-
-                    canvas.drawCircle(bitmap.getWidth()/2f,bitmap.getHeight()/2f,10,paint);
-                    ivDisplay.setImageBitmap(bitmap);
+                   PointsCords = new double[NUMBER_OF_POINTS][2];
+                   LidarPoint p = CreateLidarPoint(0,1);
+                    //drawing the center
+                    DisplayPaint.setColor(Color.CYAN);
+                    DisplayCanvas.drawCircle(DisplayCanvas.getWidth()/2f,DisplayCanvas.getHeight()/2f,4*getResources().getDisplayMetrics().density,DisplayPaint);
+                    DisplayPaint.setColor(Color.BLACK);
+                    ivDisplay.setImageBitmap(DisplayBitmap);
 
                     if(!isTableShowed) ShowTable();
 
+                    //disabling the start button
+                    btnStart.setClickable(false);
+                    btnStart.setAlpha(0.5f);
+                    ButtonMaxAlpha = 0.5f;
                 }
         });
 
-        ivDisplay.setOnClickListener((view) -> {
+        //TODO: on touch listener below
+        ivDisplay.setOnTouchListener((view, motionEvent) -> {
+            //checks whether one of the points was pressed if yes then selects it, if none was touched then hides the table
+
+
+
+
+            if (!canDisplayBeTouched || PointsCords == null) return false;
+            //disables clickability for a short while so no bugs will happen gets reenabled when table animation finishes
+            canDisplayBeTouched = false;
+            final float density = getResources().getDisplayMetrics().density;
+            for (double[] cords : PointsCords)
+            {
+                if (cords[0]==0||cords[1]==0) break;//no point will have a 0 cord so it's an end if it sees it so it doesn't loop unneeded
+                //creating a hitbox
+                if (cords[0] >= motionEvent.getX()-10*density && cords[0] <= motionEvent.getX()+10*density)
+                {
+                    if(!isTableShowed) ShowTable();
+                    //TODO: create function that highlits selected point in gui table and display
+                    return false;
+                }
+            }
             if(isTableShowed) HideTable();
             else ShowTable();
-
+            return false;
         });
     }
-
-
-
 }
