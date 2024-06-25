@@ -37,8 +37,6 @@ import android.widget.TextView;
 import org.jetbrains.annotations.TestOnly;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.Math;
 import java.util.Locale;
 import java.util.Set;
@@ -51,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int NUMBER_OF_POINTS = (int) (360 / DEG);//must be a whole number
     private static final double ANGLE_INCREASE_RAD = Math.toRadians(DEG);
     private static final CosSin COS_SIN_TABLE = new CosSin();
-    //no idea how to do it better in java, there's no preprocessor :G\
+    //no idea how to do it better in java
 
     private static final String TAG = "LIDAR_APP";
     private static final int REQUEST_EN_BT = 1;
@@ -60,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     UUID LidarUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");//default uuid
 
     private Button btnStart = null;
+    private Button btnBTCnct = null;
     private ImageView ivDisplay = null;
     private TableLayout tblPoints = null;
     private TableLayout tblBtn = null;
@@ -75,7 +74,14 @@ public class MainActivity extends AppCompatActivity {
     private boolean canDisplayBeTouched = true;
     private Handler handler = null;
 
-
+    @TestOnly
+    private void PopulatePointsWithRandomShit()
+    {
+        for (int i = 0; i < NUMBER_OF_POINTS; ++i)
+        {
+            CreateLidarPoint(i, ThreadLocalRandom.current().nextInt(400,501));
+        }
+    };
     private static final class CosSin {
         public CosSin() {
             for (double[] row : m_table) {
@@ -106,10 +112,9 @@ public class MainActivity extends AppCompatActivity {
         private double angleRad = 0;
     }
 
-    private record LidarPoint(int id, double x, double y, double distance) {
-    }
+    private record LidarPoint(int id, double x, double y, double distance) {}
 
-    //Creates lidar point, sets proper cords and adds them to the table and display
+    //Creates lidar point, sets proper cords and adds it to the table and displays
     private void CreateLidarPoint(int id, double distance) {
         //rotating point around the center
         double x = ivDisplay.getWidth() / 2f + COS_SIN_TABLE.Get(id, 1) * -distance;
@@ -120,13 +125,13 @@ public class MainActivity extends AppCompatActivity {
         PointsCords[id][1] = y;
         DisplayCanvas.drawCircle((float) x, (float) y, 4 * getResources().getDisplayMetrics().density, DisplayPaint);
         ivDisplay.setImageBitmap(DisplayBitmap);
+        ivDisplay.setImageBitmap(DisplayBitmap);
 
         //adding points to gui table
         LidarPoint point = new LidarPoint(id, x, y, distance);
         addTableElement(point);
     }
 
-    //returns false if something went wrong
     private void ConnectPoints()
     {
         Paint paint = new Paint();
@@ -142,6 +147,7 @@ public class MainActivity extends AppCompatActivity {
             DisplayCanvas.drawCircle((float)PointsCords[id][0],(float)PointsCords[id][1],4 * getResources().getDisplayMetrics().density, DisplayPaint);
         }
     }
+
     private enum ScanningState {
         STARTED,
         NO_DEVICE,
@@ -290,7 +296,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
+
         btnStart = findViewById(R.id.btnStart);
+        btnBTCnct = findViewById(R.id.btnBTCnct);
         ivDisplay = findViewById(R.id.ivDisplay);
         tblPoints = findViewById(R.id.tblPoints);
         tblBtn = findViewById(R.id.tblBtn);
@@ -301,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
             tblScroll.setVisibility(LinearLayout.GONE);
             tblBtn.setVisibility(TableLayout.VISIBLE);
             isTableShowed = false;
-        });//this needs to be like that bc the first time it shows up the height is measured as 0 cuz its "gone"
+        });//needs to be like that bc the first time it shows up the height is measured as 0 cuz its "gone"
 
         ivDisplay.post(() -> {
             DisplayBitmap = Bitmap.createBitmap(ivDisplay.getWidth(), ivDisplay.getHeight(),Bitmap.Config.ARGB_8888);
@@ -309,8 +317,7 @@ public class MainActivity extends AppCompatActivity {
             DisplayPaint = new Paint();
             DisplayPaint.setColor(Color.BLACK);
             DisplayPaint.setStyle(Paint.Style.FILL);
-        });//canvas and else need to be created after ImageView
-
+        });//canvas and else must be created after ImageView
 
 
         //setting up dialog box builder for errors
@@ -331,7 +338,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnStart.setOnClickListener((view) -> {
                 //checking if scanning has began
-                ScanningState scanningState = ScanningState.STARTED; //BeginScanning(); <-TODO
+                ScanningState scanningState = ScanningState.STARTED;//BeginScanning(); //<-TODO
                 if (scanningState != ScanningState.STARTED)
                 {
                     AlertDialog err_dlg = null;
@@ -350,16 +357,9 @@ public class MainActivity extends AppCompatActivity {
                 }
                 else
                 {
-                   PointsCords = new double[NUMBER_OF_POINTS][2];
-
-                   //TestOnly
-                   for (int i = 0; i < NUMBER_OF_POINTS; ++i)
-                    {
-                        CreateLidarPoint(i, ThreadLocalRandom.current().nextInt(400,501));
-                    }
-                   ConnectPoints();
-
-
+                    //clearing the canvas
+                    DisplayPaint.setColor(Color.WHITE);
+                    DisplayCanvas.drawPaint(DisplayPaint);
 
                     //drawing the center
                     DisplayPaint.setColor(Color.YELLOW);
@@ -367,12 +367,27 @@ public class MainActivity extends AppCompatActivity {
                     DisplayPaint.setColor(Color.BLACK);
                     ivDisplay.setImageBitmap(DisplayBitmap);
 
-                    if(!isTableShowed) ShowTable();
+
+                   PointsCords = new double[NUMBER_OF_POINTS][2];
+
+                   PopulatePointsWithRandomShit();
+                   ConnectPoints();
 
                     //disabling the start button
                     btnStart.setClickable(false);
                     btnStart.setAlpha(0.5f);
                     ButtonMaxAlpha = 0.5f;
+
+                    //this'll need to happen when everything is measured and drawn
+                    btnStart.setClickable(true);
+                    btnStart.setAlpha(1f);
+                    ButtonMaxAlpha = 1f;
+
+
+
+                    if(!isTableShowed) ShowTable();
+
+
                 }
         });
 
@@ -396,7 +411,7 @@ public class MainActivity extends AppCompatActivity {
                     if(!isTableShowed) ShowTable();
                     else canDisplayBeTouched = true;
 
-                    if (cords == LastSelectedPointCords) return false; //no pont doing something that's already been done
+                    if (cords == LastSelectedPointCords) return false; //no point doing something that's already been done
                     else
                     {
                         if(LastSelectedPointCords != null && LastSelectedPointID != null)

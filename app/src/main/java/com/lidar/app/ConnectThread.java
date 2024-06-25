@@ -1,6 +1,7 @@
 package com.lidar.app;
 
 import android.annotation.SuppressLint;
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
@@ -34,6 +35,8 @@ public class ConnectThread extends Thread {
     @SuppressLint("MissingPermission")
     public void run()
     {
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        adapter.cancelDiscovery();
         try {
             Socket.connect();
         } catch (IOException connectE) {

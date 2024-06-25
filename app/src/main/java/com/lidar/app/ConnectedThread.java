@@ -58,7 +58,7 @@ public class ConnectedThread extends Thread
                 buf[bytes] = (byte) InStream.read();
                 String msg;
 
-                if (buf[bytes] == '\n')
+                if (buf[bytes] == '\n')//new line means everything has been read
                 {
                     msg = new String(buf,0,bytes);
                     Log.e(TAG,msg);
@@ -86,6 +86,17 @@ public class ConnectedThread extends Thread
         }catch(IOException e)
         {
             Log.e(TAG,"Could not close connected socket");
+        }
+    }
+
+    public void write(String input)
+    {
+        byte[] bytes = input.getBytes();
+        try
+        {
+            OutStream.write(bytes);
+        } catch (IOException e) {
+            Log.e("MsgSendingError", "Unable to send message",e);
         }
     }
 }
